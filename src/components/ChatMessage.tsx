@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
 import { Message } from '@/types';
 import { cn } from '@/lib/utils';
 import { FileText, Download, User, Bot } from 'lucide-react';
@@ -33,11 +34,25 @@ export default function ChatMessage({ message }: ChatMessageProps) {
         )}
       </div>
 
-      {/* Content */}
       <div className="flex-1 space-y-3">
-        <p className="text-sm leading-relaxed whitespace-pre-wrap">
-          {message.content}
-        </p>
+        <div className="prose prose-sm prose-invert max-w-none">
+          <ReactMarkdown
+            components={{
+              p: ({ children }) => <p className="text-sm leading-relaxed mb-2 last:mb-0">{children}</p>,
+              ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
+              ol: ({ children }) => <ol className="list-decimal pl-4 mb-2">{children}</ol>,
+              li: ({ children }) => <li className="text-sm mb-1">{children}</li>,
+              strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+              code: ({ children }) => <code className="bg-muted px-1 py-0.5 rounded text-xs">{children}</code>,
+              pre: ({ children }) => <pre className="bg-muted p-3 rounded-lg overflow-x-auto text-xs my-2">{children}</pre>,
+              h1: ({ children }) => <h1 className="text-lg font-bold mb-2">{children}</h1>,
+              h2: ({ children }) => <h2 className="text-base font-semibold mb-2">{children}</h2>,
+              h3: ({ children }) => <h3 className="text-sm font-semibold mb-1">{children}</h3>,
+            }}
+          >
+            {message.content}
+          </ReactMarkdown>
+        </div>
 
         {/* Uploaded Files */}
         {message.files && message.files.length > 0 && (
