@@ -74,7 +74,8 @@ class ApiService {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.detail || errorData.message || 'Falha na autenticação');
+                // Backend retorna { error: "..." } em falhas
+                throw new Error(errorData.detail || errorData.error || errorData.message || 'Falha na autenticação');
             }
 
             const data = await response.json();
