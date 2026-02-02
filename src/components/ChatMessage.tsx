@@ -86,8 +86,9 @@ export default function ChatMessage({ message }: ChatMessageProps) {
                   size="sm"
                   className="gap-2 bg-success/10 border-success/30 text-success hover:bg-success/20"
                   onClick={() => {
-                    // TODO: Integrate with real download API
-                    console.log('Download:', result.downloadUrl);
+                    if (result.downloadUrl) {
+                      window.open(result.downloadUrl, '_blank');
+                    }
                   }}
                 >
                   <Download className="w-4 h-4" />
@@ -100,9 +101,9 @@ export default function ChatMessage({ message }: ChatMessageProps) {
 
         {/* Timestamp */}
         <p className="text-xs text-muted-foreground">
-          {message.timestamp.toLocaleTimeString('pt-BR', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
+          {message.timestamp.toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit'
           })}
         </p>
       </div>

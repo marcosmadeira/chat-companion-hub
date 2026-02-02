@@ -13,7 +13,7 @@ serve(async (req) => {
   try {
     const { messages } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
+
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
@@ -27,9 +27,11 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { 
-            role: "system", 
-            content: `Você é o DocProcessor AI, um assistente inteligente especializado em processamento de documentos PDF para XML.
+          {
+            role: "system",
+            content: `Você é o Alivee ChatBot AI, um assistente inteligente especializado em processamento de notas fiscais de serviço em pdf para XML no padrão Abrasf 1.0 para automatizar o processo de fechamento fiscal de
+            empresas de contabilidade e empresas que necessitam de automação no processo de fechamento fiscal, convertendo esses arquivos PDF para XML onde o sistema Domínio permite realizar a importação desses arquivos XML e trazer
+            velocidade e agilidade no processo de fechamento fiscal.
 
 Suas capacidades incluem:
 - Ajudar usuários a entender o processo de conversão de PDF para XML

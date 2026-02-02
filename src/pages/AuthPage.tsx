@@ -42,7 +42,7 @@ export default function AuthPage() {
       {/* Left Panel - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-sidebar via-background to-sidebar relative overflow-hidden">
         <div className="absolute inset-0 opacity-30" style={{ background: 'var(--gradient-glow)' }} />
-        
+
         <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -53,15 +53,15 @@ export default function AuthPage() {
               <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
                 <Sparkles className="w-6 h-6 text-primary" />
               </div>
-              <h1 className="text-3xl font-bold gradient-text">DocProcessor</h1>
+              <h1 className="text-3xl font-bold gradient-text">Alivee ChatBot</h1>
             </div>
-            
+
             <h2 className="text-4xl xl:text-5xl font-bold mb-6 leading-tight">
-              Transforme seus PDFs em XML de forma inteligente
+              Automação fiscal rápida e   inteligente
             </h2>
-            
+
             <p className="text-lg text-muted-foreground mb-12">
-              Upload, processamento e conversão automatizada com IA. 
+              Upload, processamento e conversão automatizada com IA.
               Gerencie seus projetos e acompanhe resultados em tempo real.
             </p>
 
@@ -104,7 +104,7 @@ export default function AuthPage() {
             <CardHeader className="text-center">
               <div className="flex items-center justify-center gap-2 mb-4 lg:hidden">
                 <Sparkles className="w-6 h-6 text-primary" />
-                <span className="text-xl font-bold gradient-text">DocProcessor</span>
+                <span className="text-xl font-bold gradient-text">Alivee ChatBot</span>
               </div>
               <CardTitle className="text-2xl">Bem-vindo</CardTitle>
               <CardDescription>
@@ -147,8 +147,8 @@ export default function AuthPage() {
                     {error && (
                       <p className="text-sm text-destructive">{error}</p>
                     )}
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="w-full glow-effect"
                       disabled={isLoading}
                     >
@@ -205,8 +205,8 @@ export default function AuthPage() {
                     {error && (
                       <p className="text-sm text-destructive">{error}</p>
                     )}
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="w-full glow-effect"
                       disabled={isLoading}
                     >

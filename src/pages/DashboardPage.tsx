@@ -55,10 +55,10 @@ export default function DashboardPage() {
 
   const stats: DashboardStats = {
     totalConversations: conversations.length,
-    filesProcessed: conversations.reduce((acc, c) => 
+    filesProcessed: conversations.reduce((acc, c) =>
       acc + c.messages.filter(m => m.files?.length).reduce((a, m) => a + (m.files?.length || 0), 0), 0
     ),
-    xmlGenerated: conversations.reduce((acc, c) => 
+    xmlGenerated: conversations.reduce((acc, c) =>
       acc + c.messages.filter(m => m.xmlResults?.length).reduce((a, m) => a + (m.xmlResults?.length || 0), 0), 0
     ),
     activeProjects: projects.filter(p => p.status === 'active').length,
@@ -142,7 +142,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Projects Section */}
-        <Card className="glass-effect">
+        {/* <Card className="glass-effect">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
@@ -262,7 +262,7 @@ export default function DashboardPage() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
     </div>
   );

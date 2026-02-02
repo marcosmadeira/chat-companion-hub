@@ -22,7 +22,11 @@ import {
   Bot,
   User,
   Plus,
+  Paperclip,
+  X,
 } from 'lucide-react';
+import { apiService } from '@/services/api';
+import { toast } from 'sonner';
 
 interface HelpMessage {
   id: string;
@@ -37,7 +41,18 @@ export default function SupportPage() {
   const [newTicketSubject, setNewTicketSubject] = useState('');
   const [newTicketDesc, setNewTicketDesc] = useState('');
   const [newTicketPriority, setNewTicketPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
   // Help chat state
   const [helpMessages, setHelpMessages] = useState<HelpMessage[]>([]);
@@ -86,23 +101,39 @@ export default function SupportPage() {
     if (!newTicketSubject.trim() || !newTicketDesc.trim()) return;
 
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    const newTicket: SupportTicket = {
-      id: crypto.randomUUID(),
-      subject: newTicketSubject,
-      description: newTicketDesc,
-      status: 'open',
-      priority: newTicketPriority,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    try {
+      const ticketData = {
+        subject: newTicketSubject,
+        description: newTicketDesc,
+        priority: newTicketPriority,
+      };
 
-    setTickets(prev => [newTicket, ...prev]);
-    setNewTicketSubject('');
-    setNewTicketDesc('');
-    setNewTicketPriority('medium');
-    setIsSubmitting(false);
+      const result = await apiService.createTicket(ticketData);
+
+      const newTicket: SupportTicket = {
+        id: result.id || crypto.randomUUID(),
+        subject: newTicketSubject,
+        description: newTicketDesc,
+        status: 'open',
+        priority: newTicketPriority,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      setTickets(prev => [newTicket, ...prev]);
+      setNewTicketSubject('');
+      setNewTicketDesc('');
+      setNewTicketPriority('medium');
+      setFiles([]);
+      toast.success("Ticket criado com sucesso! Um e-mail de confirmação foi enviado.");
+
+    } catch (error: any) {
+      console.error("Erro ao criar ticket:", error);
+      toast.error(error.message || "Erro ao criar ticket. Tente novamente.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const sendHelpMessage = async () => {
@@ -335,9 +366,48 @@ export default function SupportPage() {
                     rows={4}
                   />
                 </div>
+
+                {/* File Upload UI */}
+                <div className="space-y-2">
+                  <Label>Anexos</Label>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      {files.map((file, index) => (
+                        <div key={index} className="flex items-center gap-2 bg-secondary/50 px-2 py-1 rounded text-sm group">
+                          <span className="truncate max-w-[150px]">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index)}
+                            className="text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        id="ticket-files"
+                        multiple
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
+                      <label
+                        htmlFor="ticket-files"
+                        className="flex items-center gap-2 text-sm text-primary cursor-pointer hover:underline"
+                      >
+                        <Paperclip className="w-4 h-4" />
+                        Anexar arquivos
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
                 <Button
                   onClick={createTicket}
-                  disabled={!newTicketSubject.trim() || !newTicketDesc.trim() || isSubmitting}
+                  disabled={(!newTicketSubject.trim() || !newTicketDesc.trim()) && files.length === 0 || isSubmitting}
                   className="w-full md:w-auto"
                 >
                   {isSubmitting ? (
@@ -389,13 +459,13 @@ export default function SupportPage() {
                               {getStatusIcon(ticket.status)}
                               <span className="ml-1.5">
                                 {ticket.status === 'open' ? 'Aberto' :
-                                 ticket.status === 'in_progress' ? 'Em andamento' :
-                                 ticket.status === 'resolved' ? 'Resolvido' : 'Fechado'}
+                                  ticket.status === 'in_progress' ? 'Em andamento' :
+                                    ticket.status === 'resolved' ? 'Resolvido' : 'Fechado'}
                               </span>
                             </Badge>
                             <Badge variant="outline" className={getPriorityColor(ticket.priority)}>
                               {ticket.priority === 'low' ? 'Baixa' :
-                               ticket.priority === 'medium' ? 'Média' : 'Alta'}
+                                ticket.priority === 'medium' ? 'Média' : 'Alta'}
                             </Badge>
                           </div>
                         </div>

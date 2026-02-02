@@ -6,6 +6,7 @@ import { useChat } from '@/contexts/ChatContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
 import {
   MessageSquare,
   LayoutDashboard,
@@ -16,6 +17,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  Pencil,
+  Check,
+  X,
 } from 'lucide-react';
 
 interface AppSidebarProps {
@@ -25,14 +29,51 @@ interface AppSidebarProps {
 
 export default function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
   const { user, logout } = useAuth();
-  const { conversations, currentConversation, createConversation, selectConversation, deleteConversation } = useChat();
+  const { conversations, currentConversation, createConversation, selectConversation, deleteConversation, renameConversation } = useChat();
   const location = useLocation();
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [editTitle, setEditTitle] = React.useState('');
 
   const navItems = [
     { path: '/chat', icon: MessageSquare, label: 'Chat' },
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/support', icon: HeadphonesIcon, label: 'Suporte' },
   ];
+
+  const startEditing = (e: React.MouseEvent, id: string, title: string) => {
+    e.stopPropagation();
+    setEditingId(id);
+    setEditTitle(title);
+  };
+
+  const cancelEditing = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setEditingId(null);
+    setEditTitle('');
+  };
+
+  const handleRename = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (editTitle.trim()) {
+      renameConversation(id, editTitle.trim());
+    }
+    setEditingId(null);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, id: string) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (editTitle.trim()) {
+        renameConversation(id, editTitle.trim());
+      }
+      setEditingId(null);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      cancelEditing();
+    }
+  };
 
   return (
     <motion.aside
@@ -50,7 +91,7 @@ export default function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
             className="flex items-center gap-2"
           >
             <Sparkles className="w-5 h-5 text-primary" />
-            <span className="font-semibold gradient-text">DocProcessor</span>
+            <span className="font-semibold gradient-text">Alivee ChatBot</span>
           </motion.div>
         )}
         <Button
@@ -74,7 +115,7 @@ export default function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
           variant="outline"
         >
           <Plus className="w-4 h-4" />
-          {!isCollapsed && <span>Nova conversa</span>}
+          {!isCollapsed && <span>Novo Chat</span>}
         </Button>
       </div>
 
@@ -86,8 +127,8 @@ export default function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
             to={item.path}
             className={({ isActive }) => cn(
               "flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors",
-              isActive 
-                ? "bg-sidebar-accent text-sidebar-primary" 
+              isActive
+                ? "bg-sidebar-accent text-sidebar-primary"
                 : "text-sidebar-foreground hover:bg-sidebar-accent/50",
               isCollapsed && "justify-center px-2"
             )}
@@ -118,19 +159,63 @@ export default function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
                 )}
                 onClick={() => selectConversation(conv.id)}
               >
-                <MessageSquare className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
-                <span className="text-sm truncate flex-1">{conv.title}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteConversation(conv.id);
-                  }}
-                >
-                  <Trash2 className="w-3 h-3 text-muted-foreground hover:text-destructive" />
-                </Button>
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <MessageSquare className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+
+                  {editingId === conv.id ? (
+                    <div className="flex items-center gap-1 flex-1" onClick={(e) => e.stopPropagation()}>
+                      <Input
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(e, conv.id)}
+                        className="h-7 text-xs px-2 py-1"
+                        autoFocus
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="w-6 h-6 hover:text-primary"
+                        onClick={(e) => handleRename(e, conv.id)}
+                      >
+                        <Check className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="w-6 h-6 hover:text-destructive"
+                        onClick={(e) => cancelEditing(e)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span className="text-sm truncate flex-1">{conv.title}</span>
+                  )}
+                </div>
+
+                {!editingId && (
+                  <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-6 h-6 hover:text-primary"
+                      onClick={(e) => startEditing(e, conv.id, conv.title)}
+                    >
+                      <Pencil className="w-3 h-3 text-muted-foreground" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-6 h-6 hover:text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteConversation(conv.id);
+                      }}
+                    >
+                      <Trash2 className="w-3 h-3 text-muted-foreground" />
+                    </Button>
+                  </div>
+                )}
               </motion.div>
             ))}
           </ScrollArea>

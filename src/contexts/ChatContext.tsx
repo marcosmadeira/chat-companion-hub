@@ -12,6 +12,7 @@ interface ChatContextType {
   selectConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
   sendMessage: (content: string, files?: File[]) => Promise<void>;
+  renameConversation: (id: string, title: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -54,7 +55,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const createConversation = (): Conversation => {
     const newConversation: Conversation = {
       id: crypto.randomUUID(),
-      title: 'Nova conversa',
+      title: 'Novo Chat',
       messages: [],
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -78,16 +79,25 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const renameConversation = (id: string, title: string) => {
+    setConversations(prev => prev.map(c =>
+      c.id === id ? { ...c, title, updatedAt: new Date() } : c
+    ));
+    if (currentConversation?.id === id) {
+      setCurrentConversation(prev => prev ? { ...prev, title, updatedAt: new Date() } : null);
+    }
+  };
+
   const sendMessage = useCallback(async (content: string, files?: File[]) => {
     let activeConversation = currentConversation;
-    
+
     if (!activeConversation) {
       activeConversation = createConversation();
     }
 
     setIsProcessing(true);
 
-    // Create uploaded files array
+    // Create uploaded files array for UI
     const uploadedFiles: UploadedFile[] = files?.map(file => ({
       id: crypto.randomUUID(),
       name: file.name,
@@ -114,90 +124,165 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     };
 
     setCurrentConversation(updatedConversation);
-    setConversations(prev => 
+    setConversations(prev =>
       prev.map(c => c.id === updatedConversation.id ? updatedConversation : c)
     );
 
-    // Create mock XML results if files were uploaded
-    const xmlResults: XmlResult[] = files?.map(file => ({
-      id: crypto.randomUUID(),
-      fileName: file.name.replace('.pdf', '.xml'),
-      downloadUrl: `#download-${crypto.randomUUID()}`,
-      createdAt: new Date(),
-    })) || [];
-
-    // Prepare messages for AI
-    const messagesForAI = updatedConversation.messages.map(m => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    }));
-
-    // Add file context to message if files are uploaded
-    if (files && files.length > 0) {
-      const fileNames = files.map(f => f.name).join(", ");
-      messagesForAI[messagesForAI.length - 1].content = `[Usuário enviou os seguintes arquivos PDF: ${fileNames}]\n\n${content || "Processar estes arquivos PDF para XML."}`;
-    }
-
-    // Stream AI response
-    let assistantContent = "";
-    const assistantMessageId = crypto.randomUUID();
-
-    const updateAssistantMessage = (newContent: string) => {
-      assistantContent += newContent;
-      
-      const assistantMessage: Message = {
-        id: assistantMessageId,
-        role: 'assistant',
-        content: assistantContent,
-        timestamp: new Date(),
-        xmlResults: xmlResults.length > 0 ? xmlResults : undefined,
-      };
-
+    // Helper to update specific file status in the UI
+    const updateFileStatus = (status: 'uploading' | 'processing' | 'completed' | 'error') => {
       setCurrentConversation(prev => {
-        if (!prev) return prev;
-        const existingAssistantIndex = prev.messages.findIndex(m => m.id === assistantMessageId);
-        
-        if (existingAssistantIndex >= 0) {
-          const newMessages = [...prev.messages];
-          newMessages[existingAssistantIndex] = assistantMessage;
-          return { ...prev, messages: newMessages, updatedAt: new Date() };
-        } else {
-          return {
-            ...prev,
-            messages: [...prev.messages, assistantMessage],
-            updatedAt: new Date(),
-          };
-        }
-      });
-
-      setConversations(prev => 
-        prev.map(c => {
-          if (c.id === updatedConversation.id) {
-            const existingAssistantIndex = c.messages.findIndex(m => m.id === assistantMessageId);
-            if (existingAssistantIndex >= 0) {
-              const newMessages = [...c.messages];
-              newMessages[existingAssistantIndex] = assistantMessage;
-              return { ...c, messages: newMessages, updatedAt: new Date() };
-            } else {
-              return { ...c, messages: [...c.messages, assistantMessage], updatedAt: new Date() };
-            }
+        if (!prev) return null;
+        const updatedMessages = prev.messages.map(msg => {
+          if (msg.id === userMessage.id && msg.files) {
+            return {
+              ...msg,
+              files: msg.files.map(f => ({ ...f, status }))
+            };
           }
-          return c;
-        })
-      );
+          return msg;
+        });
+        return { ...prev, messages: updatedMessages };
+      });
     };
 
-    await streamChat({
-      messages: messagesForAI,
-      onDelta: (chunk) => updateAssistantMessage(chunk),
-      onDone: () => {
-        setIsProcessing(false);
-      },
-      onError: (error) => {
-        toast.error(error.message || "Erro ao processar mensagem");
-        setIsProcessing(false);
-      },
-    });
+
+    try {
+      let assistantContent = "";
+      let xmlResults: XmlResult[] = [];
+
+      // SE TIVER ARQUIVOS: PROCESSA NO BACKEND
+      if (files && files.length > 0) {
+        import('@/services/api').then(async ({ apiService }) => {
+          try {
+            const result = await apiService.processFiles(files, (status) => {
+              if (status === 'processing') updateFileStatus('processing');
+            });
+
+            updateFileStatus('completed');
+
+            if (result.success) {
+              assistantContent = result.message;
+              if (result.downloadUrl) {
+                xmlResults = [{
+                  id: crypto.randomUUID(),
+                  fileName: 'Processamento Completo (ZIP)',
+                  downloadUrl: result.downloadUrl,
+                  createdAt: new Date()
+                }];
+              }
+            } else {
+              assistantContent = "Ocorreu um problema no processamento mas não foi retornado erro explícito.";
+            }
+          } catch (error: any) {
+            console.error("Backend processing error:", error);
+            updateFileStatus('error');
+            assistantContent = `Erro ao processar arquivos: ${error.message || 'Erro desconhecido'}`;
+          } finally {
+            // Add assistant message with results
+            const assistantMessage: Message = {
+              id: crypto.randomUUID(),
+              role: 'assistant',
+              content: assistantContent,
+              timestamp: new Date(),
+              xmlResults: xmlResults.length > 0 ? xmlResults : undefined,
+            };
+
+            setCurrentConversation(prev => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                messages: [...prev.messages, assistantMessage],
+                updatedAt: new Date()
+              };
+            });
+
+            setConversations(prev =>
+              prev.map(c => {
+                if (c.id === updatedConversation.id) {
+                  return { ...c, messages: [...c.messages, assistantMessage], updatedAt: new Date() };
+                }
+                return c;
+              })
+            );
+
+            setIsProcessing(false);
+          }
+        });
+
+        // SE FOR APENAS TEXTO: CHAT STREAM NORMAL
+      } else {
+        // Prepare messages for AI
+        const messagesForAI = updatedConversation.messages.map(m => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        }));
+
+        // Stream AI response
+        const assistantMessageId = crypto.randomUUID();
+
+        const updateAssistantMessage = (newContent: string) => {
+          assistantContent += newContent;
+
+          const assistantMessage: Message = {
+            id: assistantMessageId,
+            role: 'assistant',
+            content: assistantContent,
+            timestamp: new Date(),
+            xmlResults: undefined,
+          };
+
+          setCurrentConversation(prev => {
+            if (!prev) return prev;
+            const existingAssistantIndex = prev.messages.findIndex(m => m.id === assistantMessageId);
+
+            if (existingAssistantIndex >= 0) {
+              const newMessages = [...prev.messages];
+              newMessages[existingAssistantIndex] = assistantMessage;
+              return { ...prev, messages: newMessages, updatedAt: new Date() };
+            } else {
+              return {
+                ...prev,
+                messages: [...prev.messages, assistantMessage],
+                updatedAt: new Date(),
+              };
+            }
+          });
+
+          setConversations(prev =>
+            prev.map(c => {
+              if (c.id === updatedConversation.id) {
+                const existingAssistantIndex = c.messages.findIndex(m => m.id === assistantMessageId);
+                if (existingAssistantIndex >= 0) {
+                  const newMessages = [...c.messages];
+                  newMessages[existingAssistantIndex] = assistantMessage;
+                  return { ...c, messages: newMessages, updatedAt: new Date() };
+                } else {
+                  return { ...c, messages: [...c.messages, assistantMessage], updatedAt: new Date() };
+                }
+              }
+              return c;
+            })
+          );
+        };
+
+        await streamChat({
+          messages: messagesForAI,
+          onDelta: (chunk) => updateAssistantMessage(chunk),
+          onDone: () => {
+            setIsProcessing(false);
+          },
+          onError: (error) => {
+            toast.error(error.message || "Erro ao processar mensagem");
+            setIsProcessing(false);
+          },
+        });
+      }
+
+    } catch (error) {
+      console.error("General error in sendMessage:", error);
+      setIsProcessing(false);
+    }
+
   }, [currentConversation, createConversation]);
 
   return (
@@ -208,6 +293,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       createConversation,
       selectConversation,
       deleteConversation,
+      renameConversation,
       sendMessage,
     }}>
       {children}

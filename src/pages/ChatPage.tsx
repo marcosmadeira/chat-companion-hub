@@ -33,7 +33,7 @@ export default function ChatPage() {
               {currentConversation.messages.map((message) => (
                 <ChatMessage key={message.id} message={message} />
               ))}
-              
+
               {/* Processing Indicator */}
               {isProcessing && (
                 <motion.div
@@ -78,10 +78,10 @@ export default function ChatPage() {
                 <MessageSquarePlus className="w-8 h-8 text-primary" />
               </div>
               <h2 className="text-2xl font-semibold mb-3">
-                Bem-vindo ao DocProcessor
+                Bem-vindo ao Alivee ChatBot
               </h2>
               <p className="text-muted-foreground mb-6">
-                Envie arquivos PDF para processamento. Nossa IA irá analisar e converter 
+                Envie arquivos PDF para processamento. Nossa IA irá analisar e converter
                 seus documentos em formato XML de forma inteligente.
               </p>
               <div className="grid grid-cols-2 gap-4 text-sm">
