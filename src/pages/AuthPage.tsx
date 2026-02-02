@@ -10,7 +10,7 @@ import { Loader2, Sparkles, FileText, Zap } from 'lucide-react';
 
 export default function AuthPage() {
   const { login, register, isLoading } = useAuth();
-  const [loginEmail, setLoginEmail] = useState('');
+  const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [registerName, setRegisterName] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
@@ -21,7 +21,7 @@ export default function AuthPage() {
     e.preventDefault();
     setError('');
     try {
-      await login(loginEmail, loginPassword);
+      await login(loginUsername, loginPassword);
     } catch (err) {
       setError('Falha no login. Verifique suas credenciais.');
     }
@@ -121,13 +121,13 @@ export default function AuthPage() {
                 <TabsContent value="login">
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="login-email">Email</Label>
+                      <Label htmlFor="login-username">Usuário</Label>
                       <Input
-                        id="login-email"
-                        type="email"
-                        placeholder="seu@email.com"
-                        value={loginEmail}
-                        onChange={(e) => setLoginEmail(e.target.value)}
+                        id="login-username"
+                        type="text"
+                        placeholder="seu.usuario"
+                        value={loginUsername}
+                        onChange={(e) => setLoginUsername(e.target.value)}
                         className="input-chat"
                         required
                       />

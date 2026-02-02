@@ -4,7 +4,7 @@ import { User } from '@/types';
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001/api';
 
 export interface LoginCredentials {
-    email: string;
+    username: string; // Changed from email to username
     password: string;
 }
 
@@ -59,9 +59,8 @@ class ApiService {
     async login(credentials: LoginCredentials): Promise<AuthResponse> {
         try {
             // 1. Obter Token
-            // O backend espera 'username', mas o form usa 'email'. Mapeamos email para username.
             const payload = {
-                username: credentials.email,
+                username: credentials.username,
                 password: credentials.password
             };
 
