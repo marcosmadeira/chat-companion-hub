@@ -108,14 +108,14 @@ export default function AuthPage() {
               </div>
               <CardTitle className="text-2xl">Bem-vindo</CardTitle>
               <CardDescription>
-                Entre na sua conta ou crie uma nova
+                {/* Entre na sua conta ou crie uma nova */}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="login" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="login">Entrar</TabsTrigger>
-                  <TabsTrigger value="register">Registrar</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-1 mb-6">
+                  <TabsTrigger value="login">Entre na sua conta</TabsTrigger>
+                  {/* <TabsTrigger value="register">Registrar</TabsTrigger> */}
                 </TabsList>
 
                 <TabsContent value="login">
@@ -125,7 +125,7 @@ export default function AuthPage() {
                       <Input
                         id="login-username"
                         type="text"
-                        placeholder="seu.usuario"
+                        placeholder="Digite seu usuario"
                         value={loginUsername}
                         onChange={(e) => setLoginUsername(e.target.value)}
                         className="input-chat"

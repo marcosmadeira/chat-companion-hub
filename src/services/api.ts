@@ -79,7 +79,7 @@ class ApiService {
             }
 
             const data = await response.json();
-            console.log('Login response:', data);
+            // console.log('Login response:', data);
 
             // Estrutura retornada pelo backend:
             // { user: {...}, tokens: { access_token: '...', refresh_token: '...' } }
