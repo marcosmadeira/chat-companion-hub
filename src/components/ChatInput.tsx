@@ -28,7 +28,7 @@ export default function ChatInput({ onSend, isProcessing }: ChatInputProps) {
   });
 
   const handleSubmit = () => {
-    if ((!message.trim() && files.length === 0) || isProcessing) return;
+    if ((!message.trim() && files.length === 0)) return;
     onSend(message, files.length > 0 ? files : undefined);
     setMessage('');
     setFiles([]);
@@ -55,7 +55,7 @@ export default function ChatInput({ onSend, isProcessing }: ChatInputProps) {
         )}
       >
         <input {...getInputProps()} />
-        
+
         {/* Drag Overlay */}
         <AnimatePresence>
           {isDragActive && (
@@ -130,18 +130,14 @@ export default function ChatInput({ onSend, isProcessing }: ChatInputProps) {
             size="icon"
             className={cn(
               "mb-2 mr-2 transition-all",
-              (message.trim() || files.length > 0) && !isProcessing
+              (message.trim() || files.length > 0)
                 ? "bg-primary text-primary-foreground glow-effect"
                 : "bg-muted text-muted-foreground"
             )}
-            disabled={(!message.trim() && files.length === 0) || isProcessing}
+            disabled={(!message.trim() && files.length === 0)}
             onClick={handleSubmit}
           >
-            {isProcessing ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
+            <Send className="w-4 h-4" />
           </Button>
         </div>
 

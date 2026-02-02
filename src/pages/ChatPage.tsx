@@ -81,8 +81,8 @@ export default function ChatPage() {
                 Bem-vindo ao Alivee ChatBot
               </h2>
               <p className="text-muted-foreground mb-6">
-                Envie arquivos PDF para processamento. Nossa IA irá analisar e converter
-                seus documentos em formato XML de forma inteligente.
+                Envie para processamento suas NFSe em PDF. Nossa IA irá analisar e converter
+                seus documentos em formato XML de forma inteligente pronta para importar no seu sistema fiscal.
               </p>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 {[
