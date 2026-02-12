@@ -14,7 +14,134 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      nfse_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          invoice_id: string
+          payload: Json | null
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          invoice_id: string
+          payload?: Json | null
+          source: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          invoice_id?: string
+          payload?: Json | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nfse_events_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "nfse_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nfse_invoices: {
+        Row: {
+          aliquota_iss: number | null
+          codigo_municipio: string | null
+          codigo_servico: string
+          codigo_verificacao: string | null
+          created_at: string
+          discriminacao: string
+          external_id: string | null
+          id: string
+          iss_retido: boolean | null
+          numero_nfse: string | null
+          prestador_cnpj: string
+          prestador_inscricao_municipal: string | null
+          prestador_razao_social: string
+          status: string
+          tomador_cep: string | null
+          tomador_cpf_cnpj: string
+          tomador_email: string | null
+          tomador_endereco: string | null
+          tomador_municipio: string | null
+          tomador_razao_social: string
+          tomador_uf: string | null
+          updated_at: string
+          user_id: string
+          valor_deducoes: number | null
+          valor_iss: number | null
+          valor_servicos: number
+          xml_envio_url: string | null
+          xml_retorno_url: string | null
+        }
+        Insert: {
+          aliquota_iss?: number | null
+          codigo_municipio?: string | null
+          codigo_servico: string
+          codigo_verificacao?: string | null
+          created_at?: string
+          discriminacao: string
+          external_id?: string | null
+          id?: string
+          iss_retido?: boolean | null
+          numero_nfse?: string | null
+          prestador_cnpj: string
+          prestador_inscricao_municipal?: string | null
+          prestador_razao_social: string
+          status?: string
+          tomador_cep?: string | null
+          tomador_cpf_cnpj: string
+          tomador_email?: string | null
+          tomador_endereco?: string | null
+          tomador_municipio?: string | null
+          tomador_razao_social: string
+          tomador_uf?: string | null
+          updated_at?: string
+          user_id: string
+          valor_deducoes?: number | null
+          valor_iss?: number | null
+          valor_servicos: number
+          xml_envio_url?: string | null
+          xml_retorno_url?: string | null
+        }
+        Update: {
+          aliquota_iss?: number | null
+          codigo_municipio?: string | null
+          codigo_servico?: string
+          codigo_verificacao?: string | null
+          created_at?: string
+          discriminacao?: string
+          external_id?: string | null
+          id?: string
+          iss_retido?: boolean | null
+          numero_nfse?: string | null
+          prestador_cnpj?: string
+          prestador_inscricao_municipal?: string | null
+          prestador_razao_social?: string
+          status?: string
+          tomador_cep?: string | null
+          tomador_cpf_cnpj?: string
+          tomador_email?: string | null
+          tomador_endereco?: string | null
+          tomador_municipio?: string | null
+          tomador_razao_social?: string
+          tomador_uf?: string | null
+          updated_at?: string
+          user_id?: string
+          valor_deducoes?: number | null
+          valor_iss?: number | null
+          valor_servicos?: number
+          xml_envio_url?: string | null
+          xml_retorno_url?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
