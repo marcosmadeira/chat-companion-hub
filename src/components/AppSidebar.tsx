@@ -20,6 +20,7 @@ import {
   Pencil,
   Check,
   X,
+  FileText,
 } from 'lucide-react';
 
 interface AppSidebarProps {
@@ -36,6 +37,7 @@ export default function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
 
   const navItems = [
     { path: '/chat', icon: MessageSquare, label: 'Chat' },
+    { path: '/nfse', icon: FileText, label: 'NFS-e' },
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/support', icon: HeadphonesIcon, label: 'Suporte' },
   ];

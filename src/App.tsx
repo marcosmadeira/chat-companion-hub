@@ -10,6 +10,7 @@ import AuthPage from "@/pages/AuthPage";
 import ChatPage from "@/pages/ChatPage";
 import DashboardPage from "@/pages/DashboardPage";
 import SupportPage from "@/pages/SupportPage";
+import NfsePage from "@/pages/NfsePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +56,7 @@ const App = () => (
                 <Route path="/chat" element={<ChatPage />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/support" element={<SupportPage />} />
+                <Route path="/nfse" element={<NfsePage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
