@@ -113,6 +113,11 @@ function InvoiceForm({ onClose }: { onClose: () => void }) {
             <Input placeholder="CNPJ *" value={form.prestador_cnpj} onChange={(e) => update("prestador_cnpj", e.target.value)} className="input-chat" />
             <Input placeholder="Razão Social *" value={form.prestador_razao_social} onChange={(e) => update("prestador_razao_social", e.target.value)} className="input-chat" />
             <Input placeholder="Inscrição Municipal" value={form.prestador_inscricao_municipal} onChange={(e) => update("prestador_inscricao_municipal", e.target.value)} className="input-chat" />
+            <Input placeholder="E-mail" value={form.prestador_email} onChange={(e) => update("prestador_email", e.target.value)} className="input-chat" />
+            <Input placeholder="Endereço" value={form.prestador_endereco} onChange={(e) => update("prestador_endereco", e.target.value)} className="input-chat" />
+            <Input placeholder="Municipio" value={form.prestador_municipio} onChange={(e) => update("prestador_municipio", e.target.value)} className="input-chat" />
+            <Input placeholder="UF" value={form.prestador_uf} onChange={(e) => update("prestador_uf", e.target.value)} className="input-chat" />
+            <Input placeholder="CEP" value={form.prestador_cep} onChange={(e) => update("prestador_cep", e.target.value)} className="input-chat" />
           </CardContent>
         </Card>
 

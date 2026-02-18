@@ -249,12 +249,67 @@ class ApiService {
         }
     }
 
+    async createCompany(formData: FormData): Promise<any> {
+        if (!this.token) {
+            throw new Error('Usuário não autenticado. Faça login para cadastrar uma empresa.');
+        }
+
+        try {
+            // A URL base é API_URL + '/portal_nfse/companies/'
+            const response = await fetch(`${API_URL}/portal_nfse/companies/`, {
+                method: 'POST',
+                headers: this.getHeaders(true), // `true` para indicar que é FormData, para não adicionar 'Content-Type': 'application/json'
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                // O seu backend retorna { error: "..." } em falhas
+                throw new Error(errorData.error || errorData.detail || 'Falha ao cadastrar a empresa.');
+            }
+
+            return await response.json();
+
+        } catch (error) {
+            console.error('Erro ao cadastrar empresa:', error);
+            throw error; // Propaga o erro para ser tratado no componente
+        }
+    }
+
     /**
      * Verifica se o usuário está autenticado
      */
     isAuthenticated(): boolean {
         return !!this.token;
-    }
+    };
+
+
+    async getCompanies(): Promise<any[]> {
+        if (!this.token) {
+            throw new Error('Usuário não autenticado.');
+        }
+
+        try {
+            const response = await fetch(`${API_URL}/portal_nfse/companies/`, {
+                method: 'GET',
+                headers: this.getHeaders(), // Para GET, o header padrão com JSON é suficiente
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || errorData.detail || 'Falha ao buscar as empresas.');
+            }
+
+            // A sua API Django retorna uma lista de objetos
+            return await response.json();
+
+        } catch (error) {
+            console.error('Erro ao buscar empresas:', error);
+            throw error;
+        }
+    };
+
+
 }
 
 export const apiService = new ApiService();

@@ -4,6 +4,11 @@ export interface NfseInvoiceData {
   prestador_cnpj: string;
   prestador_razao_social: string;
   prestador_inscricao_municipal?: string;
+  prestador_email?: string;
+  prestador_endereco?: string;
+  prestador_municipio?: string;
+  prestador_uf?: string;
+  prestador_cep?: string;
   tomador_cpf_cnpj: string;
   tomador_razao_social: string;
   tomador_email?: string;

@@ -1,4 +1,5 @@
 import React from 'react';
+import { ModeToggle } from "@/components/mode-toggle";
 import { motion } from 'framer-motion';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,6 +22,7 @@ import {
   Check,
   X,
   FileText,
+  Building2,
 } from 'lucide-react';
 
 interface AppSidebarProps {
@@ -37,7 +39,8 @@ export default function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
 
   const navItems = [
     { path: '/chat', icon: MessageSquare, label: 'Chat' },
-    { path: '/nfse', icon: FileText, label: 'NFS-e' },
+    { path: '/companies', icon: Building2, label: 'Busca Automatica NFSe' },
+    { path: '/nfse', icon: FileText, label: 'Emissor NFS-e' },
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/support', icon: HeadphonesIcon, label: 'Suporte' },
   ];
@@ -96,14 +99,17 @@ export default function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
             <span className="font-semibold gradient-text">Alivee ChatBot</span>
           </motion.div>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggle}
-          className="text-sidebar-foreground hover:bg-sidebar-accent"
-        >
-          {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </Button>
+        <div className="flex items-center gap-1">
+          {!isCollapsed && <ModeToggle />}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggle}
+            className="text-sidebar-foreground hover:bg-sidebar-accent"
+          >
+            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </Button>
+        </div>
       </div>
 
       {/* New Chat Button */}
