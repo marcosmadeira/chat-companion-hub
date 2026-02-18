@@ -28,6 +28,7 @@ import {
 import { apiService } from '@/services/api';
 import { toast } from 'sonner';
 
+
 interface HelpMessage {
   id: string;
   role: 'user' | 'assistant';

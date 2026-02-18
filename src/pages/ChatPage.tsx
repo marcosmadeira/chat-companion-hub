@@ -10,6 +10,7 @@ export default function ChatPage() {
   const { currentConversation, isProcessing, sendMessage, createConversation } = useChat();
   const scrollRef = useRef<HTMLDivElement>(null);
 
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;

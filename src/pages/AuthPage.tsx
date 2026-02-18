@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Sparkles, FileText, Zap } from 'lucide-react';
 
+
 export default function AuthPage() {
   const { login, register, isLoading } = useAuth();
   const [loginUsername, setLoginUsername] = useState('');

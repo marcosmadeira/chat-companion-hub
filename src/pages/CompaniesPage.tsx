@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { apiService } from "@/services/api";
 import { toast } from "sonner";
 
+
 const DEMO_COMPANY: Company = {
     id: "1",
     name: "Empresa Demonstração Ltda",

@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
+
 export default function CompanyHubPage() {
     const { id } = useParams();
     const navigate = useNavigate();

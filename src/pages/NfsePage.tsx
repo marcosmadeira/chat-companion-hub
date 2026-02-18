@@ -31,6 +31,7 @@ import {
   Activity,
 } from "lucide-react";
 
+
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   pendente: { label: "Pendente", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", icon: Clock },
   processando: { label: "Processando", color: "bg-blue-500/20 text-blue-400 border-blue-500/30", icon: Loader2 },

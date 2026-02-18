@@ -14,6 +14,7 @@ import { useForm } from "react-hook-form";
 import { apiService } from "@/services/api";
 import { getCompanyData } from "@/lib/api";
 
+
 export default function NewCompanyPage() {
     const navigate = useNavigate();
     const [loadingCNPJ, setLoadingCNPJ] = useState(false);

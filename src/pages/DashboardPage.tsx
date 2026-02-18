@@ -23,6 +23,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 
+
 export default function DashboardPage() {
   const { user } = useAuth();
   const { conversations } = useChat();
