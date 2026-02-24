@@ -1,7 +1,8 @@
 import { User } from '@/types';
 
+
 // O Django está servindo em localhost:8001
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001';
 
 export interface LoginCredentials {
     username: string; // Changed from email to username
@@ -309,6 +310,173 @@ class ApiService {
         }
     };
 
+    /**
+     * Dispara o processo de scraping de NFSe para uma empresa específica.
+     * @param companyId - O ID da empresa.
+     * @param startDate - Data de início (formato DD/MM/YYYY).
+     * @param endDate - Data de fim (formato DD/MM/YYYY).
+     */
+    // 7. Função para lidar com o clique no botão "Buscar Notas"
+    async triggerScrape(companyId: string, startDate: string, endDate: string): Promise<void> {
+        if (!this.token) {
+            throw new Error('Usuário não autenticado.');
+        }
+
+        // A URL agora é simples, sem parâmetros
+        const url = `${API_URL}/portal_nfse/scrape/trigger/`;
+
+        // Crie o objeto com os dados que serão enviados
+        const bodyData = {
+            company_id: companyId,
+            start_date: startDate,
+            end_date: endDate,
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST', // Mantém o método POST
+                headers: {
+                    // É CRUCIAL informar que o corpo é JSON
+                    'Content-Type': 'application/json',
+                    // Adiciona o cabeçalho de autorização
+                    'Authorization': `Bearer ${this.token}`,
+                },
+                // Converte o objeto em uma string JSON e o coloca no corpo da requisição
+                body: JSON.stringify(bodyData),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || errorData.detail || 'Falha ao iniciar a busca de notas.');
+            }
+
+            const result = await response.json();
+            console.log('Scraping iniciado:', result.message);
+
+        } catch (error) {
+            console.error('Erro ao trigger scraping:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Busca as notas (emitidas ou recebidas) de uma empresa específica.
+     * @param companyId - O ID da empresa.
+     * @param type - 'emitted' ou 'received'.
+     * @param filters - Objeto com filtros (datas, status, etc.).
+     */
+    async getInvoices(companyId: string, type: 'emitted' | 'received', filters: any = {}): Promise<any[]> {
+        if (!this.token) {
+            throw new Error('Usuário não autenticado.');
+        }
+
+        // **IMPORTANTE**: Você precisará criar este endpoint no seu backend Django.
+        // Ex: GET /api/portal_nfse/invoices/?company_id=...&type=emitted
+        const url = new URL(`${API_URL}/portal_nfse/invoices/`);
+        url.searchParams.append('company_id', companyId);
+        url.searchParams.append('type', type);
+
+        // Adicionar outros filtros se existirem
+        Object.keys(filters).forEach(key => {
+            if (filters[key]) {
+                url.searchParams.append(key, filters[key]);
+            }
+        });
+
+        try {
+            const response = await fetch(url.toString(), {
+                method: 'GET',
+                headers: this.getHeaders(),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || errorData.detail || 'Falha ao buscar as notas.');
+            }
+
+            return await response.json();
+
+        } catch (error) {
+            console.error(`Erro ao buscar notas ${type}:`, error);
+            throw error;
+        }
+    };
+
+    // NOVO MÉTODO PARA BAIXAR O XML
+    async downloadDocumentXml(documentId: string): Promise<Blob> {
+        if (!this.token) {
+            throw new Error('Usuário não autenticado.');
+        }
+
+        // A URL foi corrigida. Como API_URL já termina em /api, não precisamos repetir.
+        const url = `${API_URL}/portal_nfse/documents/${documentId}/download-xml/`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: this.getHeaders(), // Adiciona o cabeçalho de autorização
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || errorData.error || 'Falha ao baixar o arquivo XML.');
+            }
+
+            // Converte a resposta para um Blob, que é o tipo de dado necessário para o download no navegador.
+            return await response.blob();
+
+        } catch (error) {
+            console.error('Erro ao baixar XML:', error);
+            throw error; // Propaga o erro para ser tratado no componente
+        }
+    };
+
+    private getCookie(name: string): string | null {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Verifica se o cookie começa com o nome que procuramos
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    async bulkDownloadXml(documentIds: string[]): Promise<Blob> {
+        if (!this.token) {
+            throw new Error('Usuário não autenticado.');
+        }
+
+        const url = `${API_URL}/portal_nfse/documents/bulk-download-xml/`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    ...this.getHeaders(), // Apenas o Authorization: Bearer <token>
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ids: documentIds }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                // Agora você pode receber um erro 401 mais claro do DRF
+                throw new Error(errorData.detail || errorData.error || 'Falha ao baixar os arquivos XML.');
+            }
+
+            return await response.blob();
+
+        } catch (error) {
+            console.error('Erro ao baixar XMLs em lote:', error);
+            throw error;
+        }
+    };
 
 }
 
