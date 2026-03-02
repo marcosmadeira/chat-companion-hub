@@ -31,6 +31,15 @@ export interface TicketData {
     priority: 'low' | 'medium' | 'high';
 }
 
+// *** NOVO: Interface para tipar a resposta do status do scraping ***
+export interface ScrapingStatusResponse {
+    task_id: string;
+    status: 'PENDING' | 'STARTED' | 'SUCCESS' | 'FAILURE';
+    progress?: number; // Opcional: porcentagem de progresso
+    result?: any; // Opcional: dados do resultado em caso de sucesso
+    error?: string; // Opcional: mensagem de erro em caso de falha
+}
+
 class ApiService {
     private token: string | null = null;
     private refreshToken: string | null = null;
@@ -310,54 +319,7 @@ class ApiService {
         }
     };
 
-    /**
-     * Dispara o processo de scraping de NFSe para uma empresa específica.
-     * @param companyId - O ID da empresa.
-     * @param startDate - Data de início (formato DD/MM/YYYY).
-     * @param endDate - Data de fim (formato DD/MM/YYYY).
-     */
-    // 7. Função para lidar com o clique no botão "Buscar Notas"
-    async triggerScrape(companyId: string, startDate: string, endDate: string): Promise<void> {
-        if (!this.token) {
-            throw new Error('Usuário não autenticado.');
-        }
 
-        // A URL agora é simples, sem parâmetros
-        const url = `${API_URL}/portal_nfse/scrape/trigger/`;
-
-        // Crie o objeto com os dados que serão enviados
-        const bodyData = {
-            company_id: companyId,
-            start_date: startDate,
-            end_date: endDate,
-        };
-
-        try {
-            const response = await fetch(url, {
-                method: 'POST', // Mantém o método POST
-                headers: {
-                    // É CRUCIAL informar que o corpo é JSON
-                    'Content-Type': 'application/json',
-                    // Adiciona o cabeçalho de autorização
-                    'Authorization': `Bearer ${this.token}`,
-                },
-                // Converte o objeto em uma string JSON e o coloca no corpo da requisição
-                body: JSON.stringify(bodyData),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || errorData.detail || 'Falha ao iniciar a busca de notas.');
-            }
-
-            const result = await response.json();
-            console.log('Scraping iniciado:', result.message);
-
-        } catch (error) {
-            console.error('Erro ao trigger scraping:', error);
-            throw error;
-        }
-    }
 
     /**
      * Busca as notas (emitidas ou recebidas) de uma empresa específica.
@@ -477,6 +439,99 @@ class ApiService {
             throw error;
         }
     };
+
+
+    /**
+ * Dispara o processo de scraping de NFSe para uma empresa específica.
+ * @param companyId - O ID da empresa.
+ * @param startDate - Data de início (formato DD/MM/YYYY).
+ * @param endDate - Data de fim (formato DD/MM/YYYY).
+ */
+    // 7. Função para lidar com o clique no botão "Buscar Notas"
+    async triggerScrape(companyId: string, startDate: string, endDate: string, scrapeType: 'emitted' | 'received'): Promise<string> {
+        if (!this.token) {
+            throw new Error('Usuário não autenticado.');
+        }
+
+        // A URL agora é simples, sem parâmetros
+        const url = `${API_URL}/portal_nfse/scrape/trigger/`;
+
+        // Crie o objeto com os dados que serão enviados
+        const bodyData = {
+            company_id: companyId,
+            start_date: startDate,
+            end_date: endDate,
+            scrape_type: scrapeType,
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST', // Mantém o método POST
+                headers: {
+                    // É CRUCIAL informar que o corpo é JSON
+                    'Content-Type': 'application/json',
+                    // Adiciona o cabeçalho de autorização
+                    'Authorization': `Bearer ${this.token}`,
+                },
+                // Converte o objeto em uma string JSON e o coloca no corpo da requisição
+                body: JSON.stringify(bodyData),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || errorData.detail || 'Falha ao iniciar a busca de notas.');
+            }
+
+            const result = await response.json();
+            console.log('Scraping iniciado:', result.message);
+
+            // MUDANÇA CRUCIAL: Verifique se o backend retornou um task_id e o retorne.
+            // O nome do campo pode ser 'task_id', 'scrape_id', 'id', etc. Verifique a resposta do seu backend.
+            if (result.request_id) {
+                return result.request_id;
+            } else {
+                throw new Error('O backend não retornou um ID (request_id) para a tarefa de scraping.');
+            }
+
+        } catch (error) {
+            console.error('Erro ao trigger scraping:', error);
+            // É importante relançar o erro para que o componente possa tratá-lo.
+            throw error;
+        }
+    }
+
+    // *** NOVO MÉTODO: Para verificar o status da tarefa de scraping ***
+    /**
+    * Verifica o status de uma tarefa de scraping.
+    * @param taskId - O ID da tarefa retornado pelo `triggerScrape`.
+    * @returns Uma Promise que resolve com os dados de status da tarefa.
+    */
+    async getScrapingStatus(taskId: string): Promise<ScrapingStatusResponse> {
+        if (!this.token) {
+            throw new Error('Usuário não autenticado.');
+        }
+
+        // Endpoint para verificar o status. Você precisará criá-lo no seu backend.
+        const url = `${API_URL}/portal_nfse/scrape/status/${taskId}/`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: this.getHeaders(),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || errorData.error || 'Falha ao verificar o status da tarefa.');
+            }
+
+            return await response.json();
+
+        } catch (error) {
+            console.error('Erro ao buscar status do scraping:', error);
+            throw error;
+        }
+    }
 
 }
 

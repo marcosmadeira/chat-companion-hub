@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -112,6 +111,17 @@ export default function CompanyHubPage() {
     const [isScraping, setIsScraping] = useState(false);
     const [filterType, setFilterType] = useState<"emission" | "competence">("competence");
 
+    // --- INÍCIO DA NOVA LÓGICA DE PAGINAÇÃO ---
+    // Estado para a página atual e itens por página
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10; // Quantidade de itens por página
+
+    // UseEffect para resetar a página para 1 sempre que os filtros mudarem
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedMonth, selectedYear, activeTab, filterType]); // Adicione aqui qualquer variável que altere a lista de notas
+    // --- FIM DA NOVA LÓGICA DE PAGINAÇÃO ---
+
 
     // UseMemo para calcular o intervalo de datas exibido (sem mudanças)
     const displayDateRange = useMemo(() => {
@@ -128,8 +138,6 @@ export default function CompanyHubPage() {
     }, [selectedMonth, selectedYear]);
 
     const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
-
-    // const [displayedInvoices, setDisplayedInvoices] = useState<Invoice[]>([]);
 
     // useEffect para carregar TODAS as notas quando o componente montar ou o ID mudar
     useEffect(() => {
@@ -154,6 +162,18 @@ export default function CompanyHubPage() {
         };
 
         fetchInvoices();
+    }, [companyId]);
+
+    // Auto atualização
+
+    useEffect(() => {
+        if (!companyId) return;
+
+        // Configura um intervalo para atualizar os dados a cada 5 minutos
+        // const intervalId = setInterval(() => { refreshInvoices(); }, 5 * 60 * 1000);
+        const intervalId = setInterval(refreshInvoices, 60000);
+
+        return () => clearInterval(intervalId);
     }, [companyId]);
 
     // NOVO: useMemo para filtrar as notas com base no período selecionado
@@ -230,20 +250,31 @@ export default function CompanyHubPage() {
 
         try {
             // Lógica para converter mês/ano para datas de início e fim
-            const monthMap: { [key: string]: string } = { jan: "01", fev: "02", mar: "03", abr: "04", mai: "05", jun: "06", jul: "07", ago: "08", set: "09", out: "10", nov: "11", dez: "12" };
+            const monthMap: { [key: string]: string } = {
+                jan: "01", fev: "02", mar: "03", abr: "04",
+                mai: "05", jun: "06", jul: "07", ago: "08", set: "09", out: "10", nov: "11", dez: "12"
+            };
 
             const monthNum = monthMap[selectedMonth];
             const year = selectedYear;
             const lastDayOfMonth = new Date(parseInt(year), parseInt(monthNum), 0).getDate();
             const startDate = `01/${monthNum}/${year}`;
             const endDate = `${lastDayOfMonth}/${monthNum}/${year}`;
-            await apiService.triggerScrape(companyId, startDate, endDate);
-            toast.success("Busca de notas iniciada com sucesso! A lista será atualizada em breve.");
+
+            const scrapeId = await apiService.triggerScrape(companyId, startDate, endDate, activeTab as 'emitted' | 'received');
+
+            if (!scrapeId) {
+                throw new Error('ID da tarefa não retornado');
+            }
+            toast.success("Busca de notas iniciada com sucesso! Acompanhe o progresso.");
 
             // Opcional: buscar notas novamente após um tempo
             // setTimeout(() => {
             //     // recarregar notas
             // }, 30000);
+
+            // Inicia o polling para verificar o status
+            checkScrapingStatus(scrapeId);
 
         } catch (error: any) {
             console.error(error);
@@ -253,19 +284,27 @@ export default function CompanyHubPage() {
         }
     };
 
+
+
     // Lógica para decidir qual lista de notas mostrar
     const currentInvoices = activeTab === 'emitted' ? filteredEmittedInvoices : filteredReceivedInvoices;
-    // const { id } = useParams();
-    // const navigate = useNavigate();
-    // const [activeTab, setActiveTab] = useState("emitted");
-    // const [filterType, setFilterType] = useState("competence");
 
-    // const stats = [
-    //     { title: "NOTAS EMITIDAS", value: statsData.totalEmitted.toString(), icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10" },
-    //     { title: "VALORES (AUTORIZADOS)", value: statsData.totalValue, icon: DollarSign, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-    //     { title: "CANCELADAS", value: statsData.canceledCount.toString(), icon: XOctagon, color: "text-rose-500", bg: "bg-rose-500/10" },
-    //     { title: "PERÍODO (COMPETÊNCIA)", value: statsData.periodRange, icon: Calendar, color: "text-amber-500", bg: "bg-amber-500/10" },
-    // ];
+    // --- INÍCIO DA NOVA LÓGICA DE PAGINAÇÃO (CÁLCULOS) ---
+    // useMemo para calcular as notas paginadas e o total de páginas
+    const { paginatedInvoices, totalPages } = useMemo(() => {
+        const totalItems = currentInvoices.length;
+        const pagesCount = Math.ceil(totalItems / itemsPerPage);
+
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const paginated = currentInvoices.slice(startIndex, endIndex);
+
+        return {
+            paginatedInvoices: paginated,
+            totalPages: pagesCount,
+        };
+    }, [currentInvoices, currentPage, itemsPerPage]);
+    // --- FIM DA NOVA LÓGICA DE PAGINAÇÃO (CÁLCULOS) ---
 
     // <<< ADICIONE ESTAS FUNÇÕES DE MANIPULAÇÃO
     const handleToggleSelection = (invoiceId: string) => {
@@ -336,6 +375,68 @@ export default function CompanyHubPage() {
         }
     };
 
+    const [scrapingStatus, setScrapingStatus] = useState(null);
+    const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+
+    // Nova função para verificar o status do scraping
+    const checkScrapingStatus = async (scrapeId) => {
+        setIsCheckingStatus(true);
+
+        const checkStatus = async () => {
+            try {
+                const status = await apiService.getScrapingStatus(scrapeId);
+                setScrapingStatus(status);
+
+                if (status.status === "SUCCESS") {
+                    // Se o scraping foi concluído, recarrega os dados
+                    toast.success("Busca de notas concluída! Atualizando dados...");
+                    await refreshInvoices();
+                    setIsScraping(false);
+                    setIsCheckingStatus(false);
+                    setScrapingStatus(null);
+                } else if (status.status === "FAILURE") {
+                    // Se houve erro no scraping
+                    toast.error("Ocorreu um erro durante a busca de notas. Tente novamente.");
+                    setIsScraping(false);
+                    setIsCheckingStatus(false);
+                    setScrapingStatus(null);
+                } else {
+                    // Se ainda está em andamento, verifica novamente após 5 segundos
+                    setTimeout(checkStatus, 5000);
+                }
+            } catch (error) {
+                console.error("Erro ao verificar status:", error);
+                // Continua verificando mesmo se houver erro
+                setTimeout(checkStatus, 5000);
+            }
+        };
+
+        // Inicia a verificação após um pequeno delay
+        setTimeout(checkStatus, 3000);
+    };
+
+    // Função para recarregar as notas
+    const refreshInvoices = async () => {
+        if (!companyId) return;
+
+        setIsLoadingInvoices(true);
+        try {
+            const [emitted, received] = await Promise.all([
+                apiService.getInvoices(companyId, 'emitted'),
+                apiService.getInvoices(companyId, 'received')
+            ]);
+            setEmittedInvoices(emitted);
+            setReceivedInvoices(received);
+            toast.success("Dados atualizados com sucesso!");
+        } catch (error: any) {
+            console.error(error);
+            toast.error(error.message || "Não foi possível atualizar as notas.");
+        } finally {
+            setIsLoadingInvoices(false);
+        }
+    };
+
+
 
 
 
@@ -350,20 +451,18 @@ export default function CompanyHubPage() {
                     <h1 className="text-2xl font-bold tracking-tight">Hubs da Empresa</h1>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button onClick={(handleScrapeInvoices)}
-                        disabled={isScraping}
-                        className="bg-indigo-600 hover:bg-indigo-700 gap-2">
+                    <Button onClick={handleScrapeInvoices} disabled={isScraping} className="bg-indigo-600 hover:bg-indigo-700 gap-2">
                         {isScraping ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
                         {isScraping ? "Buscando..." : "Buscar Notas"}
                     </Button>
-                    {/* <Button variant="outline" className="gap-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50">
-                        <Download className="h-4 w-4" />
-                        Exportar
-                    </Button> */}
+                    <Button onClick={refreshInvoices} disabled={isLoadingInvoices} variant="outline" className="gap-2">
+                        {isLoadingInvoices ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
+                        {isLoadingInvoices ? "Atualizando..." : "Atualizar"}
+                    </Button>
                 </div>
             </div>
 
-            {/* NOVO: Seção de Estatísticas Dinâmicas */}
+            {/* Seção de Estatísticas Dinâmicas */}
             {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {stats.map((stat, index) => (
                     <Card key={index} className="border-none shadow-sm">
@@ -380,150 +479,71 @@ export default function CompanyHubPage() {
                 ))}
             </div> */}
 
-
-
-            {/* Stats Grid */}
-            {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {status.map((stat, i) => (
-                    <Card key={i} className="overflow-hidden border-none shadow-sm bg-card/50 backdrop-blur-sm">
-                        <CardContent className="p-6">
-                            <div className="flex items-center gap-4">
-                                <div className={`p-3 rounded-xl ${stat.bg}`}>
-                                    <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{stat.title}</p>
-                                    <p className="text-xl font-bold">{stat.value}</p>
-                                </div>
+            {isScraping && (
+                <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
+                    <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                                <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Buscando notas fiscais...</span>
                             </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div> */}
+                            {scrapingStatus && <span className="text-xs text-blue-600">Progresso: {scrapingStatus.progress || 0}%</span>}
+                        </div>
+                        {scrapingStatus && <div className="mt-2 w-full bg-blue-200 rounded-full h-2"><div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${scrapingStatus.progress || 0}%` }}></div></div>}
+                    </CardContent>
+                </Card>
+            )}
 
             {selectedInvoiceIds.length > 0 && (
                 <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
                     <CardContent className="p-4 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <CheckSquare className="h-5 w-5 text-blue-600" />
-                            <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                                {selectedInvoiceIds.length} nota(s) selecionada(s)
-                            </span>
+                            <span className="text-sm font-medium text-blue-800 dark:text-blue-200">{selectedInvoiceIds.length} nota(s) selecionada(s)</span>
                         </div>
-                        <Button onClick={handleBulkDownloadXml} size="sm" className="gap-2">
-                            <Download className="h-4 w-4" />
-                            Baixar Selecionadas ({selectedInvoiceIds.length})
-                        </Button>
+                        <Button onClick={handleBulkDownloadXml} size="sm" className="gap-2"><Download className="h-4 w-4" /> Baixar Selecionadas ({selectedInvoiceIds.length})</Button>
                     </CardContent>
                 </Card>
             )}
 
-
             {/* Tabs & Navigation */}
             <Tabs defaultValue="emitted" onValueChange={setActiveTab} className="w-full">
                 <TabsList className="bg-transparent border-b rounded-none w-full justify-start h-auto p-0 gap-8">
-                    <TabsTrigger
-                        value="emitted"
-                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 pb-2 h-10 font-semibold transition-all"
-                    >
-                        Notas Emitidas
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="received"
-                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 pb-2 h-10 font-semibold transition-all"
-                    >
-                        Notas Recebidas
-                    </TabsTrigger>
+                    <TabsTrigger value="emitted" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 pb-2 h-10 font-semibold transition-all">Notas Emitidas</TabsTrigger>
+                    <TabsTrigger value="received" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 pb-2 h-10 font-semibold transition-all">Notas Recebidas</TabsTrigger>
                 </TabsList>
             </Tabs>
 
-            {/* Filter Section - VERSÃO DINÂMICA */}
+            {/* Filter Section */}
             <Card className="border-none shadow-sm">
                 <CardContent className="p-4 space-y-4">
                     <div className="flex flex-wrap items-center gap-4">
                         <div className="flex rounded-lg border p-1 bg-muted/50">
-                            <Button
-                                variant={filterType === "emission" ? "default" : "ghost"}
-                                size="sm"
-                                onClick={() => setFilterType("emission")}
-                                className="h-8 shadow-none"
-                            >
-                                Emissão
-                            </Button>
-                            <Button
-                                variant={filterType === "competence" ? "default" : "ghost"}
-                                size="sm"
-                                onClick={() => setFilterType("competence")}
-                                className="h-8 shadow-none"
-                            >
-                                Competência
-                            </Button>
+                            <Button variant={filterType === "emission" ? "default" : "ghost"} size="sm" onClick={() => setFilterType("emission")} className="h-8 shadow-none">Emissão</Button>
+                            <Button variant={filterType === "competence" ? "default" : "ghost"} size="sm" onClick={() => setFilterType("competence")} className="h-8 shadow-none">Competência</Button>
                         </div>
-
                         <div className="flex items-center gap-2">
                             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                                <SelectTrigger className="w-[100px] h-9">
-                                    <SelectValue placeholder="Mês" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {monthOptions.map(month => (
-                                        <SelectItem key={month.value} value={month.value}>
-                                            {month.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
+                                <SelectTrigger className="w-[100px] h-9"><SelectValue placeholder="Mês" /></SelectTrigger>
+                                <SelectContent>{monthOptions.map(month => (<SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>))}</SelectContent>
                             </Select>
                             <Select value={selectedYear} onValueChange={setSelectedYear}>
-                                <SelectTrigger className="w-[100px] h-9">
-                                    <SelectValue placeholder="Ano" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {generateYearOptions().map(year => (
-                                        <SelectItem key={year} value={year}>
-                                            {year}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
+                                <SelectTrigger className="w-[100px] h-9"><SelectValue placeholder="Ano" /></SelectTrigger>
+                                <SelectContent>{generateYearOptions().map(year => (<SelectItem key={year} value={year}>{year}</SelectItem>))}</SelectContent>
                             </Select>
                         </div>
-
-                        {/* AQUI O INTERVALO DE DATAS É DINÂMICO */}
                         <div className="flex items-center border rounded-lg px-3 h-9 bg-background/50">
                             <span className="text-xs text-muted-foreground">{displayDateRange.start}</span>
                             <span className="mx-2 text-muted-foreground">→</span>
                             <span className="text-xs text-muted-foreground">{displayDateRange.end}</span>
                         </div>
-
-                        <Select defaultValue="all">
-                            <SelectTrigger className="w-[140px] h-9">
-                                <SelectValue placeholder="Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Status: Todos</SelectItem>
-                                <SelectItem value="auth">Autorizadas</SelectItem>
-                                <SelectItem value="canc">Canceladas</SelectItem>
-                            </SelectContent>
-                        </Select>
-
-                        <div className="relative flex-1 min-w-[200px]">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="Buscar por número, tomador..." className="pl-9 h-9" />
-                        </div>
-
-                        <Button className="bg-indigo-600 hover:bg-indigo-700 h-9 px-6">
-                            <Filter className="mr-2 h-4 w-4" />
-                            Filtrar
-                        </Button>
+                        <Select defaultValue="all"><SelectTrigger className="w-[140px] h-9"><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">Status: Todos</SelectItem><SelectItem value="auth">Autorizadas</SelectItem><SelectItem value="canc">Canceladas</SelectItem></SelectContent></Select>
+                        <div className="relative flex-1 min-w-[200px]"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="Buscar por número, tomador..." className="pl-9 h-9" /></div>
+                        <Button className="bg-indigo-600 hover:bg-indigo-700 h-9 px-6"><Filter className="mr-2 h-4 w-4" />Filtrar</Button>
                     </div>
-
-                    {/* AQUI A MENSAGEM DE FILTRO TAMBÉM É DINÂMICA */}
                     <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-md border border-blue-100 dark:border-blue-900/30">
-                        <span className="p-0.5 bg-blue-500 text-white rounded">
-                            <Calendar className="h-3 w-3" />
-                        </span>
-                        <span>
-                            Filtrando por <strong>{filterType === "competence" ? "Competência" : "Emissão"}: {monthOptions.find(m => m.value === selectedMonth)?.label}</strong> ({displayDateRange.start} até {displayDateRange.end}).
-                        </span>
+                        <span className="p-0.5 bg-blue-500 text-white rounded"><Calendar className="h-3 w-3" /></span>
+                        <span>Filtrando por <strong>{filterType === "competence" ? "Competência" : "Emissão"}: {monthOptions.find(m => m.value === selectedMonth)?.label}</strong> ({displayDateRange.start} até {displayDateRange.end}).</span>
                     </div>
                 </CardContent>
             </Card>
@@ -533,80 +553,43 @@ export default function CompanyHubPage() {
                 <Table>
                     <TableHeader className="bg-muted/30">
                         <TableRow>
-                            <TableHead className="w-[50px]">
-                                <Checkbox
-                                    onCheckedChange={handleSelectAll}
-                                    checked={
-                                        currentInvoices.length > 0 &&
-                                        currentInvoices.every(invoice => selectedInvoiceIds.includes(invoice.id))
-                                    }
-                                />
-                            </TableHead>
-                            <TableHead>Número</TableHead>
-                            <TableHead>Data de Emissão</TableHead>
-                            <TableHead>Tomador</TableHead>
-                            <TableHead>Valor</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Ações</TableHead>
+                            <TableHead className="w-[50px]"><Checkbox onCheckedChange={handleSelectAll} checked={paginatedInvoices.length > 0 && paginatedInvoices.every(invoice => selectedInvoiceIds.includes(invoice.id))} /></TableHead>
+                            <TableHead>Número</TableHead><TableHead>Data de Emissão</TableHead><TableHead>Tomador</TableHead><TableHead>Valor</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {isLoadingInvoices ? (
-                            <TableRow>
-                                <TableCell colSpan={7} className="text-center py-8"> {/* ColSpan aumentado para 7 */}
-                                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                                    <p className="text-muted-foreground mt-2">Carregando notas...</p>
-                                </TableCell>
-                            </TableRow>
-                        ) : currentInvoices.length > 0 ? (
-                            currentInvoices.map((invoice) => (
-                                <TableRow key={invoice.id}>
-                                    {/* Célula do Checkbox */}
-                                    <TableCell>
-                                        <Checkbox
-                                            checked={selectedInvoiceIds.includes(invoice.id)}
-                                            onCheckedChange={() => handleToggleSelection(invoice.id)}
-                                        />
-                                    </TableCell>
-                                    {/* Demais Células */}
-                                    <TableCell className="font-medium">{invoice.number}</TableCell>
-                                    <TableCell>{invoice.emission_date}</TableCell>
-                                    <TableCell>{invoice.taker}</TableCell>
-                                    <TableCell>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(invoice.value)}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={invoice.status === 'Autorizada' ? 'default' : 'destructive'}>
-                                            {invoice.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                                    <span className="sr-only">Abrir menu</span>
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleSingleDownloadXml(invoice.id, invoice.number)}>
-                                                    <FileText className="mr-2 h-4 w-4" />
-                                                    Baixar XML
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground"> {/* ColSpan aumentado para 7 */}
-                                    Nenhuma nota fiscal encontrada para o período selecionado.
-                                </TableCell>
-                            </TableRow>
-                        )}
+                        {isLoadingInvoices ? (<TableRow><TableCell colSpan={7} className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto" /><p className="text-muted-foreground mt-2">Carregando notas...</p></TableCell></TableRow>) : paginatedInvoices.length > 0 ? (paginatedInvoices.map((invoice) => (<TableRow key={invoice.id}>
+                            <TableCell><Checkbox checked={selectedInvoiceIds.includes(invoice.id)} onCheckedChange={() => handleToggleSelection(invoice.id)} /></TableCell>
+                            <TableCell className="font-medium">{invoice.number}</TableCell><TableCell>{invoice.emission_date}</TableCell><TableCell>{invoice.taker}</TableCell><TableCell>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(invoice.value)}</TableCell>
+                            <TableCell><Badge variant={invoice.status === 'Autorizada' ? 'default' : 'destructive'}>{invoice.status}</Badge></TableCell>
+                            <TableCell className="text-right">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Abrir menu</span><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => handleSingleDownloadXml(invoice.id, invoice.number)}><FileText className="mr-2 h-4 w-4" />Baixar XML</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TableCell>
+                        </TableRow>))) : (<TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma nota fiscal encontrada para o período selecionado.</TableCell></TableRow>)}
                     </TableBody>
                 </Table>
-                {/* ... Paginação ... */}
+                {/* Paginação */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-2 py-4">
+                        <div className="text-sm text-muted-foreground">Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, currentInvoices.length)} de {currentInvoices.length} notas</div>
+                        <div className="flex items-center space-x-2">
+                            <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /> <span className="sr-only">Página anterior</span></Button>
+                            <div className="flex items-center space-x-1">
+                                {[...Array(totalPages)].map((_, i) => i + 1).map(page => (<Button key={page} variant={currentPage === page ? "default" : "outline"} size="sm" className="w-8 h-8 p-0" onClick={() => setCurrentPage(page)}>{page}</Button>))}
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages}><ChevronRight className="h-4 w-4" /> <span className="sr-only">Próxima página</span></Button>
+                        </div>
+                    </div>
+                )}
             </Card>
         </div>
     );
+
+
+
 }
