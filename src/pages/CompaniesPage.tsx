@@ -65,17 +65,17 @@ export default function CompaniesPage() {
             <div className="flex flex-col md:flex-row gap-6 md:items-start justify-between">
                 <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                        <h1 className="text-3xl font-bold tracking-tight">Minhas Empresas</h1>
-                        <Badge variant="destructive" className="rounded-full text-xs">1/1</Badge>
+                        <h1 className="text-3xl font-bold tracking-tight">NFSe Hunter</h1>
+                        {/* <Badge variant="destructive" className="rounded-full text-xs">1/1</Badge> */}
                     </div>
                     <p className="text-muted-foreground">
-                        Gerencie suas empresas e notas fiscais
+                        Capture automaticamente NFSe emitidas e recebidas dos seus clientes diretamente do Portal Nacional
                     </p>
                 </div>
 
-                <div className="w-full md:w-auto min-w-[300px]">
+                {/* <div className="w-full md:w-auto min-w-[300px]">
                     <CompanyStats />
-                </div>
+                </div> */}
             </div>
 
             {/* Actions Bar */}

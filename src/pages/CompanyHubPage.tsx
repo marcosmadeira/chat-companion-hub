@@ -67,22 +67,22 @@ const monthOptions = [
     { value: 'jan', label: 'Jan' },
     { value: 'fev', label: 'Fev' },
     { value: 'mar', label: 'Mar' },
-    { value: 'abr', label: 'Abr' },
-    { value: 'mai', label: 'Mai' },
-    { value: 'jun', label: 'Jun' },
-    { value: 'jul', label: 'Jul' },
-    { value: 'ago', label: 'Ago' },
-    { value: 'set', label: 'Set' },
-    { value: 'out', label: 'Out' },
-    { value: 'nov', label: 'Nov' },
-    { value: 'dez', label: 'Dez' },
+    // { value: 'abr', label: 'Abr' },
+    // { value: 'mai', label: 'Mai' },
+    // { value: 'jun', label: 'Jun' },
+    // { value: 'jul', label: 'Jul' },
+    // { value: 'ago', label: 'Ago' },
+    // { value: 'set', label: 'Set' },
+    // { value: 'out', label: 'Out' },
+    // { value: 'nov', label: 'Nov' },
+    // { value: 'dez', label: 'Dez' },
 ];
 
 // Função para gerar anos dinamicamente
 const generateYearOptions = () => {
     const currentYear = new Date().getFullYear();
     const years = [];
-    for (let i = currentYear; i >= currentYear - 5; i--) {
+    for (let i = currentYear; i >= currentYear - 0; i--) {
         years.push(i.toString());
     }
     return years;

@@ -39,7 +39,7 @@ export default function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
 
   const navItems = [
     { path: '/chat', icon: MessageSquare, label: 'Chat' },
-    { path: '/companies', icon: Building2, label: 'Busca Automatica NFSe' },
+    { path: '/companies', icon: Building2, label: 'NFSe Hunter' },
     { path: '/nfse', icon: FileText, label: 'Emissor NFS-e' },
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/support', icon: HeadphonesIcon, label: 'Suporte' },
